@@ -6,7 +6,7 @@ module "lambda" {
   function_name   = format("%s-%s-%s", var.aws_project, each.value.name, local.app_id)
   package_type    = "Zip"
   architectures   = ["x86_64"]
-  handler         = "function.handler"
+  handler         = "function.lambda_handler"
   runtime         = "python3.11"
   memory_size     = 128
   timeout         = 300

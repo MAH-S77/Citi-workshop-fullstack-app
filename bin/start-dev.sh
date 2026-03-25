@@ -240,10 +240,10 @@ export AWS_SECRET_ACCESS_KEY=test
 
 # Detect MongoDB host for LocalStack Lambda functions
 if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-    export TF_VAR_mongodb_host="172.17.0.1"
+    export TF_VAR_aws_db_host="172.17.0.1"
     echo -e "  Detected Linux - using MongoDB host: 172.17.0.1"
 else
-    export TF_VAR_mongodb_host="host.docker.internal"
+    export TF_VAR_aws_db_host="host.docker.internal"
     echo -e "  Detected Mac/Windows - using MongoDB host: host.docker.internal"
 fi
 

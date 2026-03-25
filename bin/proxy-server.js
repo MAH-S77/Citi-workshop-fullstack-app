@@ -63,7 +63,7 @@ const server = http.createServer((req, res) => {
   }
 
   const endpointName = pathParts[1];
-  const targetUrl = endpoints[endpointName];
+  const targetUrl = endpoints[endpointName] + (parsedUrl.search || '');
 
   if (!targetUrl) {
     res.writeHead(404, { 'Content-Type': 'application/json' });
@@ -74,7 +74,12 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  console.log(`${req.method} /api/${endpointName} -> ${targetUrl}`);
+  // Build forwarded path: strip /api/{endpoint} prefix, keep remaining path + query
+  const remainingPath = '/' + pathParts.slice(2).join('/');
+  const queryString = parsedUrl.search || '';
+  const forwardPath = remainingPath + queryString;
+
+  console.log(`${req.method} /api/${endpointName}${remainingPath} -> ${targetUrl}`);
 
   // Parse target URL
   const target = url.parse(targetUrl);
@@ -94,7 +99,7 @@ const server = http.createServer((req, res) => {
   const options = {
     hostname: target.hostname,
     port: target.port,
-    path: target.path,
+    path: forwardPath,
     method: req.method,
     headers: {
       'accept': headers.accept || 'application/json',
