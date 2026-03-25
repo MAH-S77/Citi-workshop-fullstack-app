@@ -1,3 +1,4 @@
+import { Component } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -8,6 +9,23 @@ import IndividualsPage from './pages/IndividualsPage';
 import TeamsPage from './pages/TeamsPage';
 import AchievementsPage from './pages/AchievementsPage';
 import MetadataPage from './pages/MetadataPage';
+
+class ErrorBoundary extends Component {
+  state = { error: null };
+  static getDerivedStateFromError(error) { return { error }; }
+  render() {
+    if (this.state.error) {
+      return (
+        <div style={{ padding: 32, fontFamily: 'monospace' }}>
+          <h2>Something went wrong</h2>
+          <pre style={{ color: 'red', whiteSpace: 'pre-wrap' }}>{this.state.error.message}</pre>
+          <button onClick={() => this.setState({ error: null })}>Try again</button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 const theme = createTheme({
   palette: {
@@ -30,6 +48,7 @@ function PublicRoute({ children }) {
 
 export default function App() {
   return (
+    <ErrorBoundary>
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <AuthProvider>
@@ -49,5 +68,6 @@ export default function App() {
         </BrowserRouter>
       </AuthProvider>
     </ThemeProvider>
+    </ErrorBoundary>
   );
 }

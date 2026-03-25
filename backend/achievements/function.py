@@ -99,8 +99,8 @@ def lambda_handler(event, context):
     if not path_params:
         raw_path = event.get("rawPath", "")
         parts = [p for p in raw_path.strip("/").split("/") if p]
-        if parts:
-            path_params = {"id": parts[0]}
+        if len(parts) >= 3:
+            path_params = {"id": parts[-1]}
     query_params = event.get("queryStringParameters") or {}
     record_id = path_params.get("id")
 
