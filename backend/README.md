@@ -31,18 +31,76 @@ The backend is organized into Lambda functions, one for each CRUD service:
 ```
 coding-workshop-participant/
 ├── backend/               # Python backend
-│   ├── achievement/         # CRUD service for achievements
-│   │   ├── function.py        # Contains the Python service with business logic
-│   │   └── requirements.txt   # Contains the Python required dependencies
-│   ├── individual/          # CRUD service for individuals
-│   │   └── ...                # Similar to the previous service
+│   ├── auth/                # Authentication service (register, login, me)
+│   │   ├── function.py        # JWT auth, PBKDF2 password hashing, RBAC
+│   │   └── requirements.txt   # Python dependencies
+│   ├── achievements/        # CRUD service for achievements
+│   │   ├── function.py        # Business logic with team validation
+│   │   └── requirements.txt   # Python dependencies
+│   ├── individuals/         # CRUD service for individuals
+│   │   ├── function.py        # Business logic with employment type validation
+│   │   └── requirements.txt   # Python dependencies
 │   ├── metadata/            # CRUD service for metadata
-│   │   └── ...                # Similar to the previous service
-│   ├── team/                # CRUD service for teams
-│   │   └── ...                # Similar to the previous service
-│   └── README.md            # Backend guide
-├── ...
+│   │   ├── function.py        # Business logic with category/key uniqueness
+│   │   └── requirements.txt   # Python dependencies
+│   ├── teams/               # CRUD service for teams
+│   │   ├── function.py        # Business logic with leader/member validation
+│   │   └── requirements.txt   # Python dependencies
+│   └── tests/               # Backend test suite
+│       └── test_handlers.py   # 51 unit and integration tests
 ```
+
+## API Endpoints
+
+All endpoints require a `Bearer` token in the `Authorization` header (except `/api/auth/register` and `/api/auth/login`).
+
+### Authentication
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/auth/register` | Register a new user |
+| POST | `/api/auth/login` | Login and receive JWT token |
+| GET | `/api/auth/me` | Get current user info |
+
+### Individuals
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/individuals` | Create new individual |
+| GET | `/api/individuals` | List all individuals |
+| GET | `/api/individuals/{id}` | Get individual by ID |
+| PUT | `/api/individuals/{id}` | Update individual |
+| DELETE | `/api/individuals/{id}` | Delete individual |
+
+### Teams
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/teams` | Create new team |
+| GET | `/api/teams` | List all teams (includes leader and member objects) |
+| GET | `/api/teams/{id}` | Get team by ID |
+| PUT | `/api/teams/{id}` | Update team |
+| DELETE | `/api/teams/{id}` | Delete team |
+
+### Achievements
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/achievements` | Create new achievement |
+| GET | `/api/achievements` | List achievements (supports `?team_id=` and `?month=` filters) |
+| GET | `/api/achievements/{id}` | Get achievement by ID |
+| PUT | `/api/achievements/{id}` | Update achievement |
+| DELETE | `/api/achievements/{id}` | Delete achievement |
+
+### Metadata
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/metadata` | Create new metadata entry |
+| GET | `/api/metadata` | List all metadata (grouped by category) |
+| GET | `/api/metadata/{id}` | Get metadata by ID |
+| PUT | `/api/metadata/{id}` | Update metadata entry |
+| DELETE | `/api/metadata/{id}` | Delete metadata entry |
 
 ## Usage
 
@@ -65,9 +123,20 @@ To deploy your backend to AWS:
 To test your newly deployed code:
 
 ```sh
+# Login and get token
+TOKEN=$(curl -s -X POST https://{API_BASE_URL}/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"your-username","password":"your-password"}' | jq -r '.token')
+
 # Example: Get all individuals
 curl -X GET https://{API_BASE_URL}/api/individuals \
-     -H "Content-Type: application/json"
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### Running Tests
+
+```sh
+python3 -m pytest backend/tests/ -v
 ```
 
 ## Clean Up
