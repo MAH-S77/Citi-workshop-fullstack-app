@@ -2,17 +2,20 @@ import { useState, useEffect, useCallback } from 'react';
 import {
   Box, Button, Typography, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, Paper, IconButton, Dialog, DialogTitle, DialogContent,
-  DialogActions, TextField, MenuItem, CircularProgress, Chip
+  DialogActions, TextField, MenuItem, CircularProgress, Chip, Divider, Tooltip
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import LabelIcon from '@mui/icons-material/Label';
 import { metadataApi } from '../services/api';
 import ConfirmDialog from '../components/ConfirmDialog';
 import Notification from '../components/Notification';
 
 const CATEGORIES = ['individual', 'team', 'organization'];
 const EMPTY_FORM = { category: 'team', key: '', value: '' };
+const catColor = { individual: 'primary', team: 'success', organization: 'warning' };
+const catIcon = { individual: '👤', team: '👥', organization: '🏢' };
 
 export default function MetadataPage() {
   const [grouped, setGrouped] = useState({});
@@ -42,7 +45,6 @@ export default function MetadataPage() {
 
   const showNotif = (message, severity = 'success') => setNotif({ open: true, message, severity });
 
-  // Flatten grouped data into rows
   const allRows = Object.entries(grouped).flatMap(([cat, items]) => items.map(i => ({ ...i, category: cat })));
   const rows = filterCat ? allRows.filter(r => r.category === filterCat) : allRows;
 
@@ -63,10 +65,10 @@ export default function MetadataPage() {
     try {
       if (editRow) {
         await metadataApi.update(editRow.id, form);
-        showNotif('Metadata updated');
+        showNotif('Metadata updated successfully');
       } else {
         await metadataApi.create(form);
-        showNotif('Metadata created');
+        showNotif('Metadata created successfully');
       }
       setDialogOpen(false);
       load();
@@ -90,44 +92,80 @@ export default function MetadataPage() {
     }
   };
 
-  const catColor = { individual: 'primary', team: 'success', organization: 'warning' };
+  const counts = CATEGORIES.reduce((acc, c) => ({ ...acc, [c]: (grouped[c] || []).length }), {});
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-        <Typography variant="h5">Metadata</Typography>
-        <Button variant="contained" startIcon={<AddIcon />} onClick={openCreate}>Add Metadata</Button>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <LabelIcon sx={{ color: '#00838f' }} />
+          <Typography variant="h5" fontWeight={600}>Metadata</Typography>
+          <Chip label={`${allRows.length} total`} size="small" variant="outlined" sx={{ ml: 1, color: '#00838f', borderColor: '#00838f' }} />
+        </Box>
+        <Button variant="contained" startIcon={<AddIcon />} onClick={openCreate} sx={{ bgcolor: '#00838f', '&:hover': { bgcolor: '#006064' } }}>
+          Add Metadata
+        </Button>
       </Box>
 
-      <TextField select label="Filter by Category" value={filterCat} onChange={e => setFilterCat(e.target.value)} size="small" sx={{ mb: 2, minWidth: 200 }}>
-        <MenuItem value="">All Categories</MenuItem>
-        {CATEGORIES.map(c => <MenuItem key={c} value={c}>{c}</MenuItem>)}
-      </TextField>
+      {/* Category summary chips */}
+      <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+        <Chip
+          label="All"
+          onClick={() => setFilterCat('')}
+          color={filterCat === '' ? 'default' : 'default'}
+          variant={filterCat === '' ? 'filled' : 'outlined'}
+          size="small"
+          sx={{ fontWeight: filterCat === '' ? 700 : 400 }}
+        />
+        {CATEGORIES.map(c => (
+          <Chip
+            key={c}
+            label={`${catIcon[c]} ${c} (${counts[c]})`}
+            onClick={() => setFilterCat(filterCat === c ? '' : c)}
+            color={catColor[c]}
+            variant={filterCat === c ? 'filled' : 'outlined'}
+            size="small"
+            sx={{ fontWeight: filterCat === c ? 700 : 400, cursor: 'pointer' }}
+          />
+        ))}
+      </Box>
 
-      {loading ? <CircularProgress /> : (
-        <TableContainer component={Paper}>
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 6 }}><CircularProgress /></Box>
+      ) : (
+        <TableContainer component={Paper} elevation={2}>
           <Table>
-            <TableHead>
+            <TableHead sx={{ bgcolor: '#00838f' }}>
               <TableRow>
-                <TableCell>Category</TableCell>
-                <TableCell>Key</TableCell>
-                <TableCell>Value</TableCell>
-                <TableCell>Created At</TableCell>
-                <TableCell align="right">Actions</TableCell>
+                <TableCell sx={{ color: 'white', fontWeight: 600 }}>Category</TableCell>
+                <TableCell sx={{ color: 'white', fontWeight: 600 }}>Key</TableCell>
+                <TableCell sx={{ color: 'white', fontWeight: 600 }}>Value</TableCell>
+                <TableCell sx={{ color: 'white', fontWeight: 600 }}>Created</TableCell>
+                <TableCell sx={{ color: 'white', fontWeight: 600 }} align="right">Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {rows.length === 0 ? (
-                <TableRow><TableCell colSpan={5} align="center">No metadata found</TableCell></TableRow>
+                <TableRow>
+                  <TableCell colSpan={5} align="center" sx={{ py: 6, color: 'text.secondary' }}>
+                    No metadata found. Add your first entry.
+                  </TableCell>
+                </TableRow>
               ) : rows.map(row => (
                 <TableRow key={row.id} hover>
-                  <TableCell><Chip label={row.category} color={catColor[row.category] || 'default'} size="small" /></TableCell>
-                  <TableCell>{row.key}</TableCell>
-                  <TableCell>{row.value}</TableCell>
+                  <TableCell>
+                    <Chip label={`${catIcon[row.category]} ${row.category}`} color={catColor[row.category] || 'default'} size="small" />
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2" fontFamily="monospace" fontWeight={600}>{row.key}</Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Chip label={row.value} size="small" variant="outlined" />
+                  </TableCell>
                   <TableCell>{new Date(row.created_at).toLocaleDateString()}</TableCell>
                   <TableCell align="right">
-                    <IconButton onClick={() => openEdit(row)} size="small"><EditIcon /></IconButton>
-                    <IconButton onClick={() => setConfirmId(row.id)} size="small" color="error"><DeleteIcon /></IconButton>
+                    <Tooltip title="Edit"><IconButton onClick={() => openEdit(row)} size="small" color="primary"><EditIcon fontSize="small" /></IconButton></Tooltip>
+                    <Tooltip title="Delete"><IconButton onClick={() => setConfirmId(row.id)} size="small" color="error"><DeleteIcon fontSize="small" /></IconButton></Tooltip>
                   </TableCell>
                 </TableRow>
               ))}
@@ -137,17 +175,21 @@ export default function MetadataPage() {
       )}
 
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>{editRow ? 'Edit Metadata' : 'Add Metadata'}</DialogTitle>
+        <DialogTitle fontWeight={600}>{editRow ? 'Edit Metadata' : 'Add Metadata'}</DialogTitle>
+        <Divider />
         <DialogContent>
           <TextField fullWidth select label="Category" margin="normal" value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}>
-            {CATEGORIES.map(c => <MenuItem key={c} value={c}>{c}</MenuItem>)}
+            {CATEGORIES.map(c => <MenuItem key={c} value={c}>{catIcon[c]} {c}</MenuItem>)}
           </TextField>
-          <TextField fullWidth label="Key" margin="normal" value={form.key} onChange={e => setForm(f => ({ ...f, key: e.target.value }))} error={!!formErrors.key} helperText={formErrors.key} required />
-          <TextField fullWidth label="Value" margin="normal" value={form.value} onChange={e => setForm(f => ({ ...f, value: e.target.value }))} error={!!formErrors.value} helperText={formErrors.value} required />
+          <TextField fullWidth label="Key" margin="normal" value={form.key} onChange={e => setForm(f => ({ ...f, key: e.target.value }))} error={!!formErrors.key} helperText={formErrors.key} placeholder="e.g. department" required />
+          <TextField fullWidth label="Value" margin="normal" value={form.value} onChange={e => setForm(f => ({ ...f, value: e.target.value }))} error={!!formErrors.value} helperText={formErrors.value} placeholder="e.g. Engineering" required />
         </DialogContent>
-        <DialogActions>
+        <Divider />
+        <DialogActions sx={{ px: 3, py: 2 }}>
           <Button onClick={() => setDialogOpen(false)}>Cancel</Button>
-          <Button variant="contained" onClick={handleSave} disabled={saving}>{saving ? 'Saving...' : 'Save'}</Button>
+          <Button variant="contained" onClick={handleSave} disabled={saving} sx={{ bgcolor: '#00838f', '&:hover': { bgcolor: '#006064' } }}>
+            {saving ? 'Saving...' : editRow ? 'Save Changes' : 'Create'}
+          </Button>
         </DialogActions>
       </Dialog>
 

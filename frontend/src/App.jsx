@@ -5,6 +5,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import Layout from './components/Layout';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
+import DashboardPage from './pages/DashboardPage';
 import IndividualsPage from './pages/IndividualsPage';
 import TeamsPage from './pages/TeamsPage';
 import AchievementsPage from './pages/AchievementsPage';
@@ -43,7 +44,7 @@ function PrivateRoute({ children }) {
 function PublicRoute({ children }) {
   const { user, loading } = useAuth();
   if (loading) return null;
-  return user ? <Navigate to="/individuals" replace /> : children;
+  return user ? <Navigate to="/dashboard" replace /> : children;
 }
 
 export default function App() {
@@ -57,7 +58,8 @@ export default function App() {
             <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
             <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
             <Route path="/" element={<PrivateRoute><Layout /></PrivateRoute>}>
-              <Route index element={<Navigate to="/individuals" replace />} />
+              <Route index element={<Navigate to="/dashboard" replace />} />
+              <Route path="dashboard" element={<DashboardPage />} />
               <Route path="individuals" element={<IndividualsPage />} />
               <Route path="teams" element={<TeamsPage />} />
               <Route path="achievements" element={<AchievementsPage />} />

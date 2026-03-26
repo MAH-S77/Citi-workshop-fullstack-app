@@ -2,16 +2,32 @@ import { useState, useEffect, useCallback } from 'react';
 import {
   Box, Button, Typography, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, Paper, IconButton, Dialog, DialogTitle, DialogContent,
-  DialogActions, TextField, MenuItem, CircularProgress, Grid
+  DialogActions, TextField, MenuItem, CircularProgress, Chip, Divider,
+  Grid, Tooltip, Stack
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import { achievementsApi, teamsApi } from '../services/api';
 import ConfirmDialog from '../components/ConfirmDialog';
 import Notification from '../components/Notification';
 
 const EMPTY_FORM = { team_id: '', month: '', description: '', metrics: '' };
+
+function MetricsDisplay({ metrics }) {
+  if (!metrics) return <Typography color="text.secondary" variant="body2">—</Typography>;
+  if (typeof metrics === 'object') {
+    return (
+      <Stack direction="row" flexWrap="wrap" gap={0.5}>
+        {Object.entries(metrics).map(([k, v]) => (
+          <Chip key={k} label={`${k}: ${v}`} size="small" variant="outlined" color="primary" />
+        ))}
+      </Stack>
+    );
+  }
+  return <Typography variant="body2">{metrics}</Typography>;
+}
 
 export default function AchievementsPage() {
   const [rows, setRows] = useState([]);
@@ -47,7 +63,17 @@ export default function AchievementsPage() {
   const showNotif = (message, severity = 'success') => setNotif({ open: true, message, severity });
 
   const openCreate = () => { setEditRow(null); setForm(EMPTY_FORM); setFormErrors({}); setDialogOpen(true); };
-  const openEdit = (row) => { setEditRow(row); setForm({ team_id: row.team_id, month: row.month, description: row.description, metrics: row.metrics ? (typeof row.metrics === 'object' ? JSON.stringify(row.metrics) : row.metrics) : '' }); setFormErrors({}); setDialogOpen(true); };
+  const openEdit = (row) => {
+    setEditRow(row);
+    setForm({
+      team_id: row.team_id,
+      month: row.month,
+      description: row.description,
+      metrics: row.metrics ? (typeof row.metrics === 'object' ? JSON.stringify(row.metrics) : row.metrics) : ''
+    });
+    setFormErrors({});
+    setDialogOpen(true);
+  };
 
   const validate = () => {
     const errs = {};
@@ -67,10 +93,10 @@ export default function AchievementsPage() {
       if (!payload.metrics) delete payload.metrics;
       if (editRow) {
         await achievementsApi.update(editRow.id, payload);
-        showNotif('Achievement updated');
+        showNotif('Achievement updated successfully');
       } else {
         await achievementsApi.create(payload);
-        showNotif('Achievement created');
+        showNotif('Achievement created successfully');
       }
       setDialogOpen(false);
       load();
@@ -98,9 +124,15 @@ export default function AchievementsPage() {
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-        <Typography variant="h5">Achievements</Typography>
-        <Button variant="contained" startIcon={<AddIcon />} onClick={openCreate}>Add Achievement</Button>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <EmojiEventsIcon sx={{ color: '#e65100' }} />
+          <Typography variant="h5" fontWeight={600}>Achievements</Typography>
+          <Chip label={`${rows.length} total`} size="small" variant="outlined" sx={{ ml: 1, color: '#e65100', borderColor: '#e65100' }} />
+        </Box>
+        <Button variant="contained" startIcon={<AddIcon />} onClick={openCreate} sx={{ bgcolor: '#e65100', '&:hover': { bgcolor: '#bf360c' } }}>
+          Add Achievement
+        </Button>
       </Box>
 
       <Grid container spacing={2} sx={{ mb: 2 }}>
@@ -111,39 +143,51 @@ export default function AchievementsPage() {
           </TextField>
         </Grid>
         <Grid item xs={12} sm={4}>
-          <TextField fullWidth label="Filter by Month (YYYY-MM)" value={filters.month} onChange={e => setFilters(f => ({ ...f, month: e.target.value }))} size="small" placeholder="2024-01" />
+          <TextField fullWidth label="Filter by Month (YYYY-MM)" value={filters.month} onChange={e => setFilters(f => ({ ...f, month: e.target.value }))} size="small" placeholder="2025-01" />
         </Grid>
-        <Grid item xs={12} sm={4}>
-          <Button onClick={() => setFilters({ team_id: '', month: '' })} variant="outlined">Clear Filters</Button>
+        <Grid item xs={12} sm={4} sx={{ display: 'flex', alignItems: 'center' }}>
+          <Button onClick={() => setFilters({ team_id: '', month: '' })} variant="outlined" size="small">Clear Filters</Button>
         </Grid>
       </Grid>
 
-      {loading ? <CircularProgress /> : (
-        <TableContainer component={Paper}>
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 6 }}><CircularProgress /></Box>
+      ) : (
+        <TableContainer component={Paper} elevation={2}>
           <Table>
-            <TableHead>
+            <TableHead sx={{ bgcolor: '#e65100' }}>
               <TableRow>
-                <TableCell>Description</TableCell>
-                <TableCell>Team</TableCell>
-                <TableCell>Month</TableCell>
-                <TableCell>Metrics</TableCell>
-                <TableCell>Created At</TableCell>
-                <TableCell align="right">Actions</TableCell>
+                <TableCell sx={{ color: 'white', fontWeight: 600 }}>Description</TableCell>
+                <TableCell sx={{ color: 'white', fontWeight: 600 }}>Team</TableCell>
+                <TableCell sx={{ color: 'white', fontWeight: 600 }}>Month</TableCell>
+                <TableCell sx={{ color: 'white', fontWeight: 600 }}>Metrics</TableCell>
+                <TableCell sx={{ color: 'white', fontWeight: 600 }}>Created</TableCell>
+                <TableCell sx={{ color: 'white', fontWeight: 600 }} align="right">Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {rows.length === 0 ? (
-                <TableRow><TableCell colSpan={6} align="center">No achievements found</TableCell></TableRow>
+                <TableRow>
+                  <TableCell colSpan={6} align="center" sx={{ py: 6, color: 'text.secondary' }}>
+                    No achievements found. Record your first one.
+                  </TableCell>
+                </TableRow>
               ) : rows.map(row => (
                 <TableRow key={row.id} hover>
-                  <TableCell>{row.description}</TableCell>
-                  <TableCell>{teamName(row.team_id)}</TableCell>
-                  <TableCell>{row.month}</TableCell>
-                  <TableCell>{row.metrics ? (typeof row.metrics === 'object' ? JSON.stringify(row.metrics) : row.metrics) : '—'}</TableCell>
+                  <TableCell sx={{ maxWidth: 260 }}>
+                    <Typography variant="body2">{row.description}</Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Chip label={teamName(row.team_id)} size="small" color="warning" variant="outlined" />
+                  </TableCell>
+                  <TableCell>
+                    <Chip label={row.month} size="small" sx={{ fontFamily: 'monospace', fontWeight: 600 }} />
+                  </TableCell>
+                  <TableCell><MetricsDisplay metrics={row.metrics} /></TableCell>
                   <TableCell>{new Date(row.created_at).toLocaleDateString()}</TableCell>
                   <TableCell align="right">
-                    <IconButton onClick={() => openEdit(row)} size="small"><EditIcon /></IconButton>
-                    <IconButton onClick={() => setConfirmId(row.id)} size="small" color="error"><DeleteIcon /></IconButton>
+                    <Tooltip title="Edit"><IconButton onClick={() => openEdit(row)} size="small" color="primary"><EditIcon fontSize="small" /></IconButton></Tooltip>
+                    <Tooltip title="Delete"><IconButton onClick={() => setConfirmId(row.id)} size="small" color="error"><DeleteIcon fontSize="small" /></IconButton></Tooltip>
                   </TableCell>
                 </TableRow>
               ))}
@@ -153,18 +197,22 @@ export default function AchievementsPage() {
       )}
 
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>{editRow ? 'Edit Achievement' : 'Add Achievement'}</DialogTitle>
+        <DialogTitle fontWeight={600}>{editRow ? 'Edit Achievement' : 'Add Achievement'}</DialogTitle>
+        <Divider />
         <DialogContent>
           <TextField fullWidth select label="Team" margin="normal" value={form.team_id} onChange={e => setForm(f => ({ ...f, team_id: e.target.value }))} error={!!formErrors.team_id} helperText={formErrors.team_id} required>
             {teams.map(t => <MenuItem key={t.id} value={t.id}>{t.name}</MenuItem>)}
           </TextField>
-          <TextField fullWidth label="Month (YYYY-MM)" margin="normal" value={form.month} onChange={e => setForm(f => ({ ...f, month: e.target.value }))} error={!!formErrors.month} helperText={formErrors.month} placeholder="2024-01" required />
+          <TextField fullWidth label="Month (YYYY-MM)" margin="normal" value={form.month} onChange={e => setForm(f => ({ ...f, month: e.target.value }))} error={!!formErrors.month} helperText={formErrors.month} placeholder="2025-01" required />
           <TextField fullWidth label="Description" margin="normal" multiline rows={3} value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} error={!!formErrors.description} helperText={formErrors.description} required />
-          <TextField fullWidth label="Metrics (optional)" margin="normal" value={form.metrics} onChange={e => setForm(f => ({ ...f, metrics: e.target.value }))} />
+          <TextField fullWidth label='Metrics (optional, e.g. {"score":95})' margin="normal" value={form.metrics} onChange={e => setForm(f => ({ ...f, metrics: e.target.value }))} />
         </DialogContent>
-        <DialogActions>
+        <Divider />
+        <DialogActions sx={{ px: 3, py: 2 }}>
           <Button onClick={() => setDialogOpen(false)}>Cancel</Button>
-          <Button variant="contained" onClick={handleSave} disabled={saving}>{saving ? 'Saving...' : 'Save'}</Button>
+          <Button variant="contained" onClick={handleSave} disabled={saving} sx={{ bgcolor: '#e65100', '&:hover': { bgcolor: '#bf360c' } }}>
+            {saving ? 'Saving...' : editRow ? 'Save Changes' : 'Create'}
+          </Button>
         </DialogActions>
       </Dialog>
 
