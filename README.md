@@ -1,3 +1,126 @@
+# Team Tracker
+
+> Built as part of the **AWS Cloud Computing Workshop at Citigroup** — March 2026
+
+Full-stack team management app built on AWS. React frontend, Python Lambda backend, DocumentDB database. Deployed via CloudFront and S3 using Terraform. Features JWT authentication, role-based access control, and full CRUD for individuals, teams, achievements and metadata.
+
+## 🔗 Live App
+**https://d1nhgql6n40xk4.cloudfront.net**
+
+---
+
+## ⚡ What It Does
+
+- Manage **individuals** in your organisation (name, location, employment type)
+- Manage **teams** with leaders and members
+- Record monthly **achievements** per team
+- Store reference **metadata** by category
+- **Search** and filter across all pages
+- **Authentication** with 4 roles: Admin, Manager, Contributor, Viewer
+
+---
+
+## 🏗️ Architecture
+
+```
+User Browser
+     │
+     ▼
+Amazon CloudFront  ──────────────────────────────────┐
+     │                                               │
+     │  /api/*                       /*              │
+     ▼                                ▼              │
+AWS Lambda (Python)             Amazon S3            │
+  ├── auth                    (React Frontend)       │
+  ├── individuals                                    │
+  ├── teams                                          │
+  ├── achievements                                   │
+  └── metadata                                       │
+     │                                               │
+     ▼                                               │
+AWS DocumentDB                                       │
+(MongoDB-compatible)─────────────────────────────────┘
+```
+
+---
+
+## 🛠️ Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Frontend | React 19, Material UI, Vite |
+| Backend | Python 3.11, AWS Lambda |
+| Database | AWS DocumentDB (MongoDB) |
+| Infrastructure | Terraform, AWS S3, CloudFront |
+| Auth | JWT, PBKDF2 password hashing |
+
+---
+
+## 🔐 Roles & Permissions
+
+| Permission | Viewer | Contributor | Manager | Admin |
+|---|---|---|---|---|
+| Read | ✅ | ✅ | ✅ | ✅ |
+| Create | ❌ | ✅ | ✅ | ✅ |
+| Update | ❌ | ✅ | ✅ | ✅ |
+| Delete | ❌ | ❌ | ✅ | ✅ |
+| Manage Users | ❌ | ❌ | ❌ | ✅ |
+
+---
+
+## 📁 Project Structure
+
+```
+├── frontend/        # React application
+├── backend/         # Python Lambda functions
+│   ├── auth/
+│   ├── individuals/
+│   ├── teams/
+│   ├── achievements/
+│   └── metadata/
+├── infra/           # Terraform infrastructure
+└── bin/             # Deploy scripts
+```
+
+---
+
+## 🚀 Deployment
+
+```bash
+# Deploy backend
+./bin/deploy-backend.sh aws
+
+# Deploy frontend
+./bin/deploy-frontend.sh aws
+```
+
+---
+
+## 📡 API Endpoints
+
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | /api/auth/register | Register new user |
+| POST | /api/auth/login | Login and get JWT token |
+| GET | /api/individuals | List all individuals |
+| POST | /api/individuals | Create individual |
+| PUT | /api/individuals/{id} | Update individual |
+| DELETE | /api/individuals/{id} | Delete individual |
+| GET | /api/teams | List all teams |
+| POST | /api/teams | Create team |
+| PUT | /api/teams/{id} | Update team / manage members |
+| DELETE | /api/teams/{id} | Delete team |
+| GET | /api/achievements | List achievements |
+| POST | /api/achievements | Record achievement |
+| PUT | /api/achievements/{id} | Update achievement |
+| DELETE | /api/achievements/{id} | Delete achievement |
+| GET | /api/metadata | List all metadata |
+| POST | /api/metadata | Create metadata entry |
+| PUT | /api/metadata/{id} | Update metadata entry |
+| DELETE | /api/metadata/{id} | Delete metadata entry |
+
+---
+
 # Coding Workshop
 
 The goal of this coding workshop is to enable and assess the hands-on skills

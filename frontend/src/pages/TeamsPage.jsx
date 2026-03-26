@@ -3,7 +3,8 @@ import {
   Box, Button, Typography, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, Paper, IconButton, Dialog, DialogTitle, DialogContent,
   DialogActions, TextField, MenuItem, CircularProgress, Chip, OutlinedInput,
-  Select, InputLabel, FormControl, Divider, Avatar, Stack, Tooltip, Collapse
+  Select, InputLabel, FormControl, Divider, Avatar, Stack, Tooltip, Collapse,
+  InputAdornment
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
@@ -13,11 +14,12 @@ import PersonRemoveIcon from '@mui/icons-material/PersonRemove';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import GroupIcon from '@mui/icons-material/Group';
+import SearchIcon from '@mui/icons-material/Search';
 import { teamsApi, individualsApi } from '../services/api';
 import ConfirmDialog from '../components/ConfirmDialog';
 import Notification from '../components/Notification';
 
-const EMPTY_FORM = { name: '', location: '', leader_id: '', member_ids: [], org_id: '' };
+const EMPTY_FORM = { name: '', location: '', leader_id: '', member_ids: [] };
 
 function stringAvatar(name = '') {
   const parts = name.trim().split(' ');
@@ -29,6 +31,7 @@ export default function TeamsPage() {
   const [rows, setRows] = useState([]);
   const [individuals, setIndividuals] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editRow, setEditRow] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
@@ -36,7 +39,7 @@ export default function TeamsPage() {
   const [saving, setSaving] = useState(false);
   const [confirmId, setConfirmId] = useState(null);
   const [expandedRow, setExpandedRow] = useState(null);
-  const [removeMemberState, setRemoveMemberState] = useState(null); // { teamId, memberId, memberName }
+  const [removeMemberState, setRemoveMemberState] = useState(null);
   const [notif, setNotif] = useState({ open: false, message: '', severity: 'success' });
 
   const load = useCallback(async () => {
@@ -64,7 +67,6 @@ export default function TeamsPage() {
       location: row.location,
       leader_id: row.leader?.id || row.leader_id || '',
       member_ids: row.members?.map(m => m?.id).filter(Boolean) || row.member_ids || [],
-      org_id: row.org_id || '',
     });
     setFormErrors({});
     setDialogOpen(true);
@@ -84,7 +86,6 @@ export default function TeamsPage() {
     setSaving(true);
     try {
       const payload = { ...form };
-      if (!payload.org_id) delete payload.org_id;
       if (editRow) {
         await teamsApi.update(editRow.id, payload);
         showNotif('Team updated successfully');
@@ -132,52 +133,94 @@ export default function TeamsPage() {
 
   const indName = (id) => individuals.find(i => i.id === id)?.name || id;
 
+  const filtered = rows.filter(r => {
+    const q = search.toLowerCase();
+    return (
+      r.name?.toLowerCase().includes(q) ||
+      r.location?.toLowerCase().includes(q) ||
+      r.leader?.name?.toLowerCase().includes(q)
+    );
+  });
+
   return (
     <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <GroupIcon color="primary" />
-          <Typography variant="h5" fontWeight={600}>Teams</Typography>
-          <Chip label={`${rows.length} total`} size="small" color="primary" variant="outlined" sx={{ ml: 1 }} />
+      {/* Page header */}
+      <Paper elevation={0} sx={{ p: 2.5, mb: 3, borderLeft: '4px solid #7b1fa2', borderRadius: 2, bgcolor: 'white', border: '1px solid #e8eaf6' }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <Avatar sx={{ bgcolor: '#f3e5f5', width: 40, height: 40 }}>
+              <GroupIcon sx={{ color: '#7b1fa2' }} />
+            </Avatar>
+            <Box>
+              <Typography variant="h6" fontWeight={700} lineHeight={1.2}>Teams</Typography>
+              <Typography variant="caption" color="text.secondary">
+                {rows.length} team{rows.length !== 1 ? 's' : ''} total
+              </Typography>
+            </Box>
+            <Chip label={`${rows.length}`} size="small" sx={{ bgcolor: '#7b1fa2', color: 'white', fontWeight: 700, ml: 0.5 }} />
+          </Box>
+          <Button variant="contained" startIcon={<AddIcon />} onClick={openCreate}
+            sx={{ bgcolor: '#7b1fa2', '&:hover': { bgcolor: '#6a1b9a' }, borderRadius: 2, fontWeight: 600 }}>
+            New Team
+          </Button>
         </Box>
-        <Button variant="contained" startIcon={<AddIcon />} onClick={openCreate}>New Team</Button>
-      </Box>
+      </Paper>
+
+      {/* Search bar */}
+      <TextField
+        fullWidth
+        placeholder="Search by team name, location or leader..."
+        value={search}
+        onChange={e => setSearch(e.target.value)}
+        size="small"
+        sx={{ mb: 2 }}
+        InputProps={{
+          startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" sx={{ color: 'text.secondary' }} /></InputAdornment>,
+          sx: { borderRadius: 2, bgcolor: 'white' }
+        }}
+      />
 
       {loading ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', mt: 6 }}><CircularProgress /></Box>
       ) : (
-        <TableContainer component={Paper} elevation={2}>
+        <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e0e0e0', borderRadius: 2, overflow: 'hidden' }}>
           <Table>
-            <TableHead sx={{ bgcolor: 'primary.main' }}>
+            <TableHead sx={{ bgcolor: '#7b1fa2' }}>
               <TableRow>
                 <TableCell sx={{ color: 'white', fontWeight: 600 }}>Team</TableCell>
                 <TableCell sx={{ color: 'white', fontWeight: 600 }}>Location</TableCell>
                 <TableCell sx={{ color: 'white', fontWeight: 600 }}>Leader</TableCell>
                 <TableCell sx={{ color: 'white', fontWeight: 600 }}>Members</TableCell>
-                <TableCell sx={{ color: 'white', fontWeight: 600 }}>Org ID</TableCell>
                 <TableCell sx={{ color: 'white', fontWeight: 600 }}>Created</TableCell>
                 <TableCell sx={{ color: 'white', fontWeight: 600 }} align="right">Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {rows.length === 0 ? (
+              {filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} align="center" sx={{ py: 6, color: 'text.secondary' }}>
-                    No teams found. Create your first team.
+                  <TableCell colSpan={6} align="center" sx={{ py: 6, color: 'text.secondary' }}>
+                    {search ? `No teams match "${search}"` : 'No teams found. Create your first team.'}
                   </TableCell>
                 </TableRow>
-              ) : rows.map(row => {
+              ) : filtered.map(row => {
                 const members = row.members?.filter(Boolean) || [];
                 const isExpanded = expandedRow === row.id;
                 return [
-                  <TableRow key={row.id} hover sx={{ '&:hover': { bgcolor: 'action.hover' } }}>
-                    <TableCell>
-                      <Typography fontWeight={600}>{row.name}</Typography>
-                    </TableCell>
-                    <TableCell>{row.location}</TableCell>
+                  <TableRow key={row.id} hover sx={{ '&:hover': { bgcolor: '#faf5ff' } }}>
                     <TableCell>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Avatar sx={{ width: 28, height: 28, fontSize: 12, bgcolor: 'primary.main' }}>
+                        <Avatar sx={{ width: 32, height: 32, fontSize: 12, fontWeight: 700, bgcolor: '#7b1fa2' }}>
+                          {stringAvatar(row.name)}
+                        </Avatar>
+                        <Typography fontWeight={600} variant="body2">{row.name}</Typography>
+                      </Box>
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2" color="text.secondary">{row.location}</Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Avatar sx={{ width: 26, height: 26, fontSize: 11, bgcolor: '#1976d2' }}>
                           {stringAvatar(row.leader?.name || '')}
                         </Avatar>
                         <Typography variant="body2">{row.leader?.name || row.leader_id}</Typography>
@@ -189,15 +232,16 @@ export default function TeamsPage() {
                         variant="outlined"
                         endIcon={isExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
                         onClick={() => setExpandedRow(isExpanded ? null : row.id)}
-                        sx={{ textTransform: 'none' }}
+                        sx={{ textTransform: 'none', borderRadius: 2, borderColor: '#7b1fa2', color: '#7b1fa2' }}
                       >
                         {members.length} member{members.length !== 1 ? 's' : ''}
                       </Button>
                     </TableCell>
                     <TableCell>
-                      {row.org_id ? <Chip label={row.org_id} size="small" variant="outlined" /> : <Typography color="text.secondary" variant="body2">—</Typography>}
+                      <Typography variant="body2" color="text.secondary">
+                        {new Date(row.created_at).toLocaleDateString()}
+                      </Typography>
                     </TableCell>
-                    <TableCell>{new Date(row.created_at).toLocaleDateString()}</TableCell>
                     <TableCell align="right">
                       <Tooltip title="Add member">
                         <IconButton size="small" color="success" onClick={() => {
@@ -206,7 +250,6 @@ export default function TeamsPage() {
                             name: row.name, location: row.location,
                             leader_id: row.leader?.id || row.leader_id || '',
                             member_ids: members.map(m => m.id),
-                            org_id: row.org_id || '',
                           });
                           setFormErrors({});
                           setDialogOpen(true);
@@ -227,10 +270,10 @@ export default function TeamsPage() {
                     </TableCell>
                   </TableRow>,
                   <TableRow key={`${row.id}-members`}>
-                    <TableCell colSpan={7} sx={{ p: 0, border: 0 }}>
+                    <TableCell colSpan={6} sx={{ p: 0, border: 0 }}>
                       <Collapse in={isExpanded} timeout="auto" unmountOnExit>
-                        <Box sx={{ px: 4, py: 2, bgcolor: 'grey.50', borderBottom: '1px solid', borderColor: 'divider' }}>
-                          <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1.5 }}>
+                        <Box sx={{ px: 4, py: 2, bgcolor: '#faf5ff', borderBottom: '1px solid #e8d5f5' }}>
+                          <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1.5, color: '#7b1fa2' }}>
                             Team Members
                           </Typography>
                           {members.length === 0 ? (
@@ -245,7 +288,7 @@ export default function TeamsPage() {
                                   variant="outlined"
                                   onDelete={() => setRemoveMemberState({ teamId: row.id, memberId: m.id, memberName: m.name })}
                                   deleteIcon={<Tooltip title="Remove from team"><PersonRemoveIcon /></Tooltip>}
-                                  color="default"
+                                  sx={{ borderColor: '#ce93d8' }}
                                 />
                               ))}
                             </Stack>
@@ -263,7 +306,7 @@ export default function TeamsPage() {
 
       {/* Create / Edit Dialog */}
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle sx={{ fontWeight: 600 }}>
+        <DialogTitle sx={{ fontWeight: 700, pb: 1 }}>
           {editRow ? 'Edit Team' : 'Create New Team'}
         </DialogTitle>
         <Divider />
@@ -274,9 +317,6 @@ export default function TeamsPage() {
           <TextField fullWidth label="Location" margin="normal" value={form.location}
             onChange={e => setForm(f => ({ ...f, location: e.target.value }))}
             error={!!formErrors.location} helperText={formErrors.location} required />
-          <TextField fullWidth label="Organisation ID (optional)" margin="normal" value={form.org_id}
-            onChange={e => setForm(f => ({ ...f, org_id: e.target.value }))}
-            placeholder="e.g. org-emea-001" />
           <TextField fullWidth select label="Team Leader" margin="normal" value={form.leader_id}
             onChange={e => setForm(f => ({ ...f, leader_id: e.target.value }))}
             error={!!formErrors.leader_id} helperText={formErrors.leader_id} required>
@@ -301,7 +341,8 @@ export default function TeamsPage() {
         <Divider />
         <DialogActions sx={{ px: 3, py: 2 }}>
           <Button onClick={() => setDialogOpen(false)}>Cancel</Button>
-          <Button variant="contained" onClick={handleSave} disabled={saving}>
+          <Button variant="contained" onClick={handleSave} disabled={saving}
+            sx={{ bgcolor: '#7b1fa2', '&:hover': { bgcolor: '#6a1b9a' } }}>
             {saving ? 'Saving...' : editRow ? 'Save Changes' : 'Create Team'}
           </Button>
         </DialogActions>
